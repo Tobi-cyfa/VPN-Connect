@@ -3,7 +3,7 @@ Version:        @VERSION@
 Release:        1
 Summary:        IPsec VPN client for Sophos Firewall (.scx profiles)
 License:        GPL-2.0-or-later
-URL:            https://github.com/Tobi-cyfa/VPN-Connect
+URL:            https://github.com/zero-cyfa/VPN-Connect
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
 Requires:       python3 >= 3.8
