@@ -1,0 +1,801 @@
+diff --git a/src/frontends/android/app/build.gradle b/src/frontends/android/app/build.gradle
+index 3e883bc..674252f 100644
+--- a/src/frontends/android/app/build.gradle
++++ b/src/frontends/android/app/build.gradle
+@@ -4,13 +4,13 @@ android {
+     namespace = 'org.strongswan.android'
+ 
+     defaultConfig {
+-        applicationId "org.strongswan.android"
++        applicationId "com.vpnconnect.app"
+         compileSdk = 36
+         minSdkVersion 21
+         targetSdkVersion 36
+ 
+-        versionCode 96
+-        versionName "2.6.2"
++        versionCode 2
++        versionName "0.2"
+ 
+         externalNativeBuild {
+             ndkBuild {
+diff --git a/src/frontends/android/app/src/main/AndroidManifest.xml b/src/frontends/android/app/src/main/AndroidManifest.xml
+index c0a8ed4..c582e25 100644
+--- a/src/frontends/android/app/src/main/AndroidManifest.xml
++++ b/src/frontends/android/app/src/main/AndroidManifest.xml
+@@ -40,15 +40,44 @@
+         android:networkSecurityConfig="@xml/network_security_config"
+         android:enableOnBackInvokedCallback="true"
+         android:allowBackup="false" >
++        <!-- VPN Connect: launcher screen and VPN log viewer -->
+         <activity
+-            android:name=".ui.MainActivity"
+-            android:label="@string/main_activity_name"
+-            android:launchMode="singleTop"
+-            android:exported="true">
++            android:name="com.vpnconnect.app.MainActivity"
++            android:configChanges="orientation|screenSize|keyboardHidden"
++            android:exported="true"
++            android:label="@string/app_name"
++            android:launchMode="singleTask"
++            android:theme="@style/JCTheme"
++            android:windowSoftInputMode="adjustResize|stateHidden">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
+                 <category android:name="android.intent.category.LAUNCHER" />
+             </intent-filter>
++            <!-- "Open with" for .scx files -->
++            <intent-filter>
++                <action android:name="android.intent.action.VIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++                <category android:name="android.intent.category.BROWSABLE" />
++                <data android:scheme="content" />
++                <data android:scheme="file" />
++                <data android:host="*" />
++                <data android:mimeType="*/*" />
++                <data android:pathPattern=".*\\.scx" />
++                <data android:pathPattern=".*\\..*\\.scx" />
++                <data android:pathPattern=".*\\..*\\..*\\.scx" />
++            </intent-filter>
++        </activity>
++        <activity
++            android:name="com.vpnconnect.app.LogActivity"
++            android:exported="false"
++            android:label="@string/vc_log_title"
++            android:theme="@style/JCTheme" />
++
++        <activity
++            android:name=".ui.MainActivity"
++            android:label="@string/main_activity_name"
++            android:launchMode="singleTop"
++            android:exported="true">
+             <intent-filter>
+                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+             </intent-filter>
+@@ -202,7 +231,7 @@
+ 
+         <provider
+             android:name=".data.LogContentProvider"
+-            android:authorities="org.strongswan.android.content.log"
++            android:authorities="com.vpnconnect.app.content.log"
+             android:exported="true" >
+             <!-- android:grantUriPermissions="true" combined with a custom permission does
+                  not work (probably too many indirections with ACTION_SEND) so we secure
+diff --git a/src/frontends/android/app/src/main/java/org/strongswan/android/data/DatabaseHelper.java b/src/frontends/android/app/src/main/java/org/strongswan/android/data/DatabaseHelper.java
+index 7feccbd..f948519 100644
+--- a/src/frontends/android/app/src/main/java/org/strongswan/android/data/DatabaseHelper.java
++++ b/src/frontends/android/app/src/main/java/org/strongswan/android/data/DatabaseHelper.java
+@@ -70,6 +70,7 @@ public class DatabaseHelper extends SQLiteOpenHelper
+ 		new DbColumn(VpnProfileDataSource.KEY_PROXY_HOST, "TEXT", 19),
+ 		new DbColumn(VpnProfileDataSource.KEY_PROXY_PORT, "INTEGER", 19),
+ 		new DbColumn(VpnProfileDataSource.KEY_PROXY_EXCLUSIONS, "TEXT", 19),
++		new DbColumn(VpnProfileDataSource.KEY_IKEV1_OPTIONS, "TEXT", 20),
+ 	});
+ 
+ 	public static final DbTable TABLE_TRUSTED_CERTIFICATE = new DbTable(TABLE_NAME_TRUSTED_CERTIFICATE, 18, new DbColumn[]{
+@@ -87,7 +88,7 @@ public class DatabaseHelper extends SQLiteOpenHelper
+ 		new DbColumn(ManagedUserCertificate.KEY_PASSWORD, "TEXT", 18),
+ 	});
+ 
+-	private static final int DATABASE_VERSION = 19;
++	private static final int DATABASE_VERSION = 20;
+ 
+ 	private static final Set<DbTable> TABLES;
+ 
+diff --git a/src/frontends/android/app/src/main/java/org/strongswan/android/data/LogContentProvider.java b/src/frontends/android/app/src/main/java/org/strongswan/android/data/LogContentProvider.java
+index 0049f08..c9a9a1c 100644
+--- a/src/frontends/android/app/src/main/java/org/strongswan/android/data/LogContentProvider.java
++++ b/src/frontends/android/app/src/main/java/org/strongswan/android/data/LogContentProvider.java
+@@ -37,7 +37,7 @@ import android.provider.OpenableColumns;
+ 
+ public class LogContentProvider extends ContentProvider
+ {
+-	private static final String AUTHORITY = "org.strongswan.android.content.log";
++	private static final String AUTHORITY = "com.vpnconnect.app.content.log";
+ 	/* an Uri is valid for 30 minutes */
+ 	private static final long URI_VALIDITY = 30 * 60 * 1000;
+ 	private static ConcurrentHashMap<Uri, Long> mUris = new ConcurrentHashMap<Uri, Long>();
+diff --git a/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfile.java b/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfile.java
+index 52464eb..4c5db73 100644
+--- a/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfile.java
++++ b/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfile.java
+@@ -42,6 +42,8 @@ public class VpnProfile implements Cloneable
+ 
+ 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
+ 	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
++	/* JSON with the settings of IKEv1 PSK/XAuth connections: psk, dpd, ike_rekey, child_rekey */
++	private String mIkev1Options;
+ 	private String mIkeProposal, mEspProposal, mDnsServers, mProxyHost, mProxyExclusions;
+ 	private Integer mMTU, mPort, mProxyPort, mSplitTunneling, mNATKeepAlive, mFlags;
+ 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
+@@ -255,6 +257,16 @@ public class VpnProfile implements Cloneable
+ 		return mExcludedSubnets;
+ 	}
+ 
++	public String getIkev1Options()
++	{
++		return mIkev1Options;
++	}
++
++	public void setIkev1Options(String options)
++	{
++		this.mIkev1Options = options;
++	}
++
+ 	public void setIncludedSubnets(String includedSubnets)
+ 	{
+ 		this.mIncludedSubnets = includedSubnets;
+diff --git a/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfileDataSource.java b/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfileDataSource.java
+index b528933..96980e4 100644
+--- a/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfileDataSource.java
++++ b/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfileDataSource.java
+@@ -50,6 +50,7 @@ public interface VpnProfileDataSource
+ 	String KEY_IKE_PROPOSAL = "ike_proposal";
+ 	String KEY_ESP_PROPOSAL = "esp_proposal";
+ 	String KEY_DNS_SERVERS = "dns_servers";
++	String KEY_IKEV1_OPTIONS = "ikev1_options";
+ 	String KEY_PROXY_SERVER = "proxy_server";
+ 	String KEY_PROXY_HOST = "proxy_host";
+ 	String KEY_PROXY_PORT = "proxy_port";
+diff --git a/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfileSqlDataSource.java b/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfileSqlDataSource.java
+index cee26a4..84f173e 100644
+--- a/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfileSqlDataSource.java
++++ b/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnProfileSqlDataSource.java
+@@ -154,6 +154,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
+ 		profile.setProxyHost(cursor.getString(cursor.getColumnIndexOrThrow(KEY_PROXY_HOST)));
+ 		profile.setProxyPort(getInt(cursor, cursor.getColumnIndexOrThrow(KEY_PROXY_PORT)));
+ 		profile.setProxyExclusions(cursor.getString(cursor.getColumnIndexOrThrow(KEY_PROXY_EXCLUSIONS)));
++		profile.setIkev1Options(cursor.getString(cursor.getColumnIndexOrThrow(KEY_IKEV1_OPTIONS)));
+ 		return profile;
+ 	}
+ 
+@@ -185,6 +186,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
+ 		values.put(KEY_PROXY_HOST, profile.getProxyHost());
+ 		values.put(KEY_PROXY_PORT, profile.getProxyPort());
+ 		values.put(KEY_PROXY_EXCLUSIONS, profile.getProxyExclusions());
++		values.put(KEY_IKEV1_OPTIONS, profile.getIkev1Options());
+ 		return values;
+ 	}
+ 
+diff --git a/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnType.java b/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnType.java
+index 0552a64..f303538 100644
+--- a/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnType.java
++++ b/src/frontends/android/app/src/main/java/org/strongswan/android/data/VpnType.java
+@@ -29,7 +29,9 @@ public enum VpnType
+ 	IKEV2_CERT("ikev2-cert", EnumSet.of(VpnTypeFeature.CERTIFICATE)),
+ 	IKEV2_CERT_EAP("ikev2-cert-eap", EnumSet.of(VpnTypeFeature.USER_PASS, VpnTypeFeature.CERTIFICATE)),
+ 	IKEV2_EAP_TLS("ikev2-eap-tls", EnumSet.of(VpnTypeFeature.CERTIFICATE)),
+-	IKEV2_BYOD_EAP("ikev2-byod-eap", EnumSet.of(VpnTypeFeature.USER_PASS, VpnTypeFeature.BYOD));
++	IKEV2_BYOD_EAP("ikev2-byod-eap", EnumSet.of(VpnTypeFeature.USER_PASS, VpnTypeFeature.BYOD)),
++	/* IKEv1 Main Mode with a pre-shared key and XAuth (user name and password), e.g. Sophos Firewall remote access */
++	IKEV1_XAUTH_PSK("ikev1-xauth-psk", EnumSet.of(VpnTypeFeature.USER_PASS));
+ 
+ 	/**
+ 	 * Features of a VPN type.
+diff --git a/src/frontends/android/app/src/main/java/org/strongswan/android/logic/CharonVpnService.java b/src/frontends/android/app/src/main/java/org/strongswan/android/logic/CharonVpnService.java
+index 97e93e8..f2587a7 100644
+--- a/src/frontends/android/app/src/main/java/org/strongswan/android/logic/CharonVpnService.java
++++ b/src/frontends/android/app/src/main/java/org/strongswan/android/logic/CharonVpnService.java
+@@ -47,6 +47,7 @@ import org.strongswan.android.data.VpnProfile;
+ import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
+ import org.strongswan.android.data.VpnProfileDataSource;
+ import org.strongswan.android.data.VpnProfileSource;
++import org.strongswan.android.data.VpnType;
+ import org.strongswan.android.data.VpnType.VpnTypeFeature;
+ import org.strongswan.android.logic.VpnStateService.ErrorState;
+ import org.strongswan.android.logic.VpnStateService.State;
+@@ -324,6 +325,21 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
+ 							writer.setValue("connection.strict_revocation", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_STRICT_REVOCATION) != 0);
+ 							writer.setValue("connection.ike_proposal", mCurrentProfile.getIkeProposal());
+ 							writer.setValue("connection.esp_proposal", mCurrentProfile.getEspProposal());
++							if (mCurrentProfile.getVpnType() == VpnType.IKEV1_XAUTH_PSK)
++							{	/* IKEv1 with PSK and XAuth: one CHILD_SA per subnet listed as included subnets */
++								try
++								{
++									org.json.JSONObject options = new org.json.JSONObject(mCurrentProfile.getIkev1Options());
++									writer.setValue("connection.psk", options.optString("psk", null));
++									writer.setValue("connection.dpd", options.has("dpd") ? options.getInt("dpd") : null);
++									writer.setValue("connection.ike_rekey", options.has("ike_rekey") ? options.getInt("ike_rekey") : null);
++									writer.setValue("connection.child_rekey", options.has("child_rekey") ? options.getInt("child_rekey") : null);
++								}
++								catch (Exception e)
++								{	/* no usable options, the native code reports the missing pre-shared key */
++								}
++								writer.setValue("connection.routes", mCurrentProfile.getIncludedSubnets());
++							}
+ 							initiate(writer.serialize());
+ 						}
+ 						else
+diff --git a/src/frontends/android/app/src/main/jni/Android.mk b/src/frontends/android/app/src/main/jni/Android.mk
+index 06cddaa..8a064a7 100644
+--- a/src/frontends/android/app/src/main/jni/Android.mk
++++ b/src/frontends/android/app/src/main/jni/Android.mk
+@@ -7,7 +7,8 @@ strongswan_USE_BYOD := true
+ 
+ strongswan_CHARON_PLUGINS := android-log socket-default openssl nonce \
+ 	pkcs1 pem x509 xcbc kdf revocation \
+-	eap-identity eap-mschapv2 eap-md5 eap-gtc eap-tls
++	eap-identity eap-mschapv2 eap-md5 eap-gtc eap-tls \
++	xauth-generic
+ 
+ ifneq ($(strongswan_USE_BYOD),)
+ strongswan_BYOD_PLUGINS := eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20
+diff --git a/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_creds.c b/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_creds.c
+index 24b6127..b4f4d3d 100644
+--- a/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_creds.c
++++ b/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_creds.c
+@@ -248,6 +248,18 @@ METHOD(android_creds_t, add_username_password, void,
+ 	this->creds->add_shared(this->creds, shared_key, id, NULL);
+ }
+ 
++METHOD(android_creds_t, add_psk, void,
++	private_android_creds_t *this, char *psk)
++{
++	shared_key_t *shared_key;
++	identification_t *any;
++
++	shared_key = shared_key_create(SHARED_IKE, chunk_clone(chunk_from_str(psk)));
++	any = identification_create_from_string("%any");
++
++	this->creds->add_shared(this->creds, shared_key, any, NULL);
++}
++
+ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
+ 	private_android_creds_t *this, shared_key_type_t type,
+ 	identification_t *me, identification_t *other)
+@@ -364,6 +376,7 @@ android_creds_t *android_creds_create(char *crldir)
+ 				.cache_cert = _cache_cert,
+ 			},
+ 			.add_username_password = _add_username_password,
++			.add_psk = _add_psk,
+ 			.load_user_certificate = _load_user_certificate,
+ 			.clear = _clear,
+ 			.destroy = _destroy,
+diff --git a/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_creds.h b/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_creds.h
+index 0279f35..deccfe8 100644
+--- a/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_creds.h
++++ b/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_creds.h
+@@ -47,6 +47,13 @@ struct android_creds_t {
+ 	void (*add_username_password)(android_creds_t *this, char *username,
+ 								  char *password);
+ 
++	/**
++	 * Add an IKE pre-shared key that is used for any identity (IKEv1 PSK).
++	 *
++	 * @param psk			the pre-shared key
++	 */
++	void (*add_psk)(android_creds_t *this, char *psk);
++
+ 	/**
+ 	 * Load the user certificate and private key
+ 	 *
+diff --git a/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_service.c b/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_service.c
+index 2ab0af9..4e8e71a 100644
+--- a/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_service.c
++++ b/src/frontends/android/app/src/main/jni/libandroidbridge/backend/android_service.c
+@@ -83,6 +83,12 @@ struct private_android_service_t {
+ 	 * Whether to use the DNS proxy or not
+ 	 */
+ 	bool use_dns_proxy;
++
++	/**
++	 * TRUE if all routes come from the configuration (connection.routes), in
++	 * which case a single TUN device is shared by all CHILD_SAs
++	 */
++	bool static_routes;
+ };
+ 
+ CALLBACK(send_esp, void,
+@@ -251,6 +257,54 @@ static bool add_routes(vpnservice_builder_t *builder, child_sa_t *child_sa)
+ 	return success;
+ }
+ 
++/**
++ * Add the subnets listed in the configuration (separated by spaces or commas)
++ * as routes to the TUN device builder
++ */
++static bool add_configured_routes(vpnservice_builder_t *builder, char *routes)
++{
++	enumerator_t *enumerator;
++	traffic_selector_t *ts;
++	host_t *net;
++	uint8_t prefix;
++	char *token;
++	bool success = TRUE;
++
++	enumerator = enumerator_create_token(routes, " ,", " ");
++	while (success && enumerator->enumerate(enumerator, &token))
++	{
++		ts = traffic_selector_create_from_cidr(token, 0, 0, 65535);
++		if (!ts)
++		{
++			DBG1(DBG_CFG, "ignoring invalid route '%s'", token);
++			continue;
++		}
++		ts->to_subnet(ts, &net, &prefix);
++		success = add_route(builder, net, prefix);
++		net->destroy(net);
++		ts->destroy(ts);
++	}
++	enumerator->destroy(enumerator);
++	return success;
++}
++
++/**
++ * Add routes to the builder: the explicitly configured ones if there are any,
++ * otherwise those derived from the installed IPsec policies of the CHILD_SA
++ */
++static bool add_all_routes(private_android_service_t *this,
++						   vpnservice_builder_t *builder, child_sa_t *child_sa)
++{
++	char *routes;
++
++	routes = this->settings->get_str(this->settings, "connection.routes", NULL);
++	if (routes && strlen(routes))
++	{
++		return add_configured_routes(builder, routes);
++	}
++	return add_routes(builder, child_sa);
++}
++
+ /**
+  * Add DNS servers to the builder
+  */
+@@ -327,7 +381,7 @@ static bool setup_tun_device(private_android_service_t *this,
+ 		return FALSE;
+ 	}
+ 	if (!add_dns_servers(builder, ike_sa) ||
+-		!add_routes(builder, child_sa) ||
++		!add_all_routes(this, builder, child_sa) ||
+ 		!builder->set_mtu(builder, this->mtu))
+ 	{
+ 		return FALSE;
+@@ -535,6 +589,8 @@ METHOD(listener_t, child_updown, bool,
+ 	private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+ 	bool up)
+ {
++	bool rebuild = TRUE;
++
+ 	if (this->ike_sa == ike_sa)
+ 	{
+ 		if (up)
+@@ -547,9 +603,14 @@ METHOD(listener_t, child_updown, bool,
+ 			/* CHILD_SA is up so we can disable the DNS proxy we enabled to
+ 			 * reestablish the SA */
+ 			this->lock->write_lock(this->lock);
++			if (this->static_routes && this->tunfd > 0 && !this->use_dns_proxy)
++			{	/* the TUN device already routes to all configured subnets, so
++				 * additional CHILD_SAs (IKEv1 creates one per subnet) just use it */
++				rebuild = FALSE;
++			}
+ 			this->use_dns_proxy = FALSE;
+ 			this->lock->unlock(this->lock);
+-			if (!setup_tun_device(this, ike_sa, child_sa))
++			if (rebuild && !setup_tun_device(this, ike_sa, child_sa))
+ 			{
+ 				DBG1(DBG_DMN, "failed to setup TUN device");
+ 				charonservice->update_status(charonservice,
+@@ -754,6 +815,208 @@ static proposal_t *parse_proposal(private_android_service_t *this,
+ 	return proposal;
+ }
+ 
++/**
++ * Initiate an IKEv1 Main Mode connection that authenticates with a pre-shared
++ * key followed by XAuth (user name and password), requests a virtual IP and DNS
++ * servers via Mode Config, and negotiates one CHILD_SA (Quick Mode with PFS) per
++ * remote subnet.  This is how Sophos Firewall remote access IPsec works.
++ */
++static job_requeue_t initiate_ikev1(private_android_service_t *this)
++{
++	ike_cfg_t *ike_cfg;
++	peer_cfg_t *peer_cfg;
++	child_cfg_t *child_cfg;
++	linked_list_t *children;
++	enumerator_t *enumerator;
++	identification_t *gateway;
++	traffic_selector_t *ts;
++	proposal_t *proposal;
++	ike_sa_t *ike_sa;
++	auth_cfg_t *auth;
++	char *username, *password, *psk, *routes, *remote_id, *token, name[32];
++	uint32_t child_rekey;
++	int index = 0;
++	bool failed = FALSE;
++	ike_cfg_create_t ike = {
++		.version = IKEV1,
++		.local = "",
++		.local_port = charon->socket->get_port(charon->socket, FALSE),
++		.force_encap = TRUE,
++		.fragmentation = FRAGMENTATION_YES,
++	};
++	peer_cfg_create_t peer = {
++		.options = OPT_NO_MOBIKE,
++		.cert_policy = CERT_NEVER_SEND,
++		.unique = UNIQUE_REPLACE,
++		.keyingtries = 1,
++	};
++	child_cfg_create_t child = {
++		.mode = MODE_TUNNEL,
++		.dpd_action = ACTION_START,
++		.close_action = ACTION_START,
++	};
++
++	ike.remote = this->settings->get_str(this->settings, "connection.server",
++										 NULL);
++	ike.remote_port = this->settings->get_int(this->settings, "connection.port",
++											  IKEV2_UDP_PORT);
++	username = this->settings->get_str(this->settings, "connection.username",
++									   NULL);
++	password = this->settings->get_str(this->settings, "connection.password",
++									   NULL);
++	psk = this->settings->get_str(this->settings, "connection.psk", NULL);
++	if (!ike.remote || !username || !password || !psk || !strlen(psk))
++	{
++		DBG1(DBG_CFG, "incomplete IKEv1 configuration (server, user name, "
++			 "password and pre-shared key are required)");
++		charonservice->update_status(charonservice,
++									 CHARONSERVICE_GENERIC_ERROR);
++		return JOB_REQUEUE_NONE;
++	}
++	peer.dpd = this->settings->get_int(this->settings, "connection.dpd", 30);
++	peer.rekey_time = this->settings->get_int(this->settings,
++											  "connection.ike_rekey", 10710);
++	peer.jitter_time = peer.rekey_time / 10;
++	peer.over_time = 100;
++	child_rekey = this->settings->get_int(this->settings,
++										  "connection.child_rekey", 3600);
++	child.lifetime.time.rekey = child_rekey;
++	child.lifetime.time.life = child_rekey + child_rekey / 10;
++	child.lifetime.time.jitter = child_rekey / 20;
++
++	this->creds->add_username_password(this->creds, username, password);
++	this->creds->add_psk(this->creds, psk);
++
++	ike_cfg = ike_cfg_create(&ike);
++	proposal = parse_proposal(this, PROTO_IKE, "connection.ike_proposal");
++	if (proposal)
++	{
++		ike_cfg->add_proposal(ike_cfg, proposal);
++	}
++	else
++	{
++		ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
++										"aes256-sha256-modp2048"));
++	}
++
++	peer_cfg = peer_cfg_create("android", ike_cfg, &peer);
++	/* Mode Config: ask for an IPv4 address (DNS servers are requested by the
++	 * attribute handler) */
++	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
++
++	/* local authentication, round 1: pre-shared key.  We don't set a local
++	 * identity, so our IP address is used as it is by other IKEv1 clients */
++	auth = auth_cfg_create();
++	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
++	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
++
++	/* local authentication, round 2: XAuth with user name and password */
++	auth = auth_cfg_create();
++	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_XAUTH);
++	auth->add(auth, AUTH_RULE_XAUTH_IDENTITY,
++			  identification_create_from_string(username));
++	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
++
++	/* remote authentication: pre-shared key, gateway identified by its address */
++	auth = auth_cfg_create();
++	remote_id = this->settings->get_str(this->settings, "connection.remote_id",
++										NULL);
++	gateway = remote_id ? identification_create_from_string(remote_id) : NULL;
++	if (!gateway || gateway->get_type(gateway) == ID_ANY)
++	{
++		DESTROY_IF(gateway);
++		gateway = identification_create_from_string(ike.remote);
++		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
++	}
++	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
++	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
++	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
++
++	/* one CHILD_SA per remote subnet, local side is our virtual IP */
++	children = linked_list_create();
++	routes = this->settings->get_str(this->settings, "connection.routes", NULL);
++	if (!routes || !strlen(routes))
++	{
++		routes = "0.0.0.0/0";
++	}
++	enumerator = enumerator_create_token(routes, " ,", " ");
++	while (enumerator->enumerate(enumerator, &token))
++	{
++		ts = traffic_selector_create_from_cidr(token, 0, 0, 65535);
++		if (!ts)
++		{
++			DBG1(DBG_CFG, "ignoring invalid subnet '%s'", token);
++			continue;
++		}
++		snprintf(name, sizeof(name), "tunnel-%d", ++index);
++		child_cfg = child_cfg_create(name, &child);
++		proposal = parse_proposal(this, PROTO_ESP, "connection.esp_proposal");
++		if (proposal)
++		{
++			child_cfg->add_proposal(child_cfg, proposal);
++		}
++		else
++		{
++			child_cfg->add_proposal(child_cfg, proposal_create_from_string(
++									PROTO_ESP, "aes256-sha512-modp2048"));
++		}
++		child_cfg->add_traffic_selector(child_cfg, TRUE,
++										traffic_selector_create_dynamic(0, 0, 65535));
++		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
++		/* keep a reference for ourselves, add_child_cfg() consumes one */
++		child_cfg->get_ref(child_cfg);
++		children->insert_last(children, child_cfg);
++		peer_cfg->add_child_cfg(peer_cfg, child_cfg);
++	}
++	enumerator->destroy(enumerator);
++
++	/* get us an IKE_SA */
++	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
++														peer_cfg);
++	peer_cfg->destroy(peer_cfg);
++	if (!ike_sa || !children->get_count(children))
++	{
++		if (ike_sa)
++		{
++			charon->ike_sa_manager->checkin_and_destroy(
++										charon->ike_sa_manager, ike_sa);
++		}
++		children->destroy_offset(children, offsetof(child_cfg_t, destroy));
++		charonservice->update_status(charonservice,
++									 CHARONSERVICE_GENERIC_ERROR);
++		return JOB_REQUEUE_NONE;
++	}
++
++	/* store the IKE_SA so we can track its progress */
++	this->ike_sa = ike_sa;
++
++	/* The first initiate() starts Main Mode, XAuth and Mode Config; the others
++	 * queue further Quick Modes that run once the IKE_SA is established. Every
++	 * call consumes one reference of the child config. */
++	enumerator = children->create_enumerator(children);
++	while (enumerator->enumerate(enumerator, &child_cfg))
++	{
++		child_cfg->get_ref(child_cfg);
++		if (ike_sa->initiate(ike_sa, child_cfg, NULL) != SUCCESS)
++		{
++			DBG1(DBG_CFG, "failed to initiate tunnel");
++			failed = TRUE;
++			break;
++		}
++	}
++	enumerator->destroy(enumerator);
++	children->destroy_offset(children, offsetof(child_cfg_t, destroy));
++
++	if (failed)
++	{
++		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
++													ike_sa);
++		return JOB_REQUEUE_NONE;
++	}
++	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
++	return JOB_REQUEUE_NONE;
++}
++
+ static job_requeue_t initiate(private_android_service_t *this)
+ {
+ 	identification_t *gateway = NULL;
+@@ -792,6 +1055,12 @@ static job_requeue_t initiate(private_android_service_t *this)
+ 	};
+ 	char *type, *remote_id;
+ 
++	type = this->settings->get_str(this->settings, "connection.type", NULL);
++	if (type && streq(type, "ikev1-xauth-psk"))
++	{
++		return initiate_ikev1(this);
++	}
++
+ 	/* only try once and notify the GUI since Android 5+ where we have a
+ 	 * blocking TUN device */
+ 	peer.keyingtries = 1;
+@@ -818,7 +1087,6 @@ static job_requeue_t initiate(private_android_service_t *this)
+ 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
+ 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
+ 
+-	type = this->settings->get_str(this->settings, "connection.type", NULL);
+ 	/* local auth config */
+ 	if (streq("ikev2-cert", type) ||
+ 		streq("ikev2-cert-eap", type) ||
+@@ -939,6 +1207,7 @@ android_service_t *android_service_create(android_creds_t *creds,
+ 										  settings_t *settings)
+ {
+ 	private_android_service_t *this;
++	char *routes;
+ 
+ 	INIT(this,
+ 		.public = {
+@@ -958,6 +1227,9 @@ android_service_t *android_service_create(android_creds_t *creds,
+ 		.tunfd = -1,
+ 		.mtu = settings->get_int(settings, "global.mtu", ANDROID_DEFAULT_MTU),
+ 	);
++	routes = settings->get_str(settings, "connection.routes", NULL);
++	this->static_routes = routes && strlen(routes);
++
+ 	/* only allow queries for the VPN gateway */
+ 	this->dns_proxy->add_hostname(this->dns_proxy,
+ 			this->settings->get_str(this->settings, "connection.server", NULL));
+diff --git a/src/frontends/android/app/src/main/jni/libandroidbridge/charonservice.c b/src/frontends/android/app/src/main/jni/libandroidbridge/charonservice.c
+index 531fd94..0c27db3 100644
+--- a/src/frontends/android/app/src/main/jni/libandroidbridge/charonservice.c
++++ b/src/frontends/android/app/src/main/jni/libandroidbridge/charonservice.c
+@@ -42,7 +42,7 @@
+ #include <library.h>
+ #include <threading/thread.h>
+ 
+-#define ANDROID_DEBUG_LEVEL 1
++#define ANDROID_DEBUG_LEVEL 2
+ #define ANDROID_RETRASNMIT_TRIES 3
+ #define ANDROID_RETRANSMIT_TIMEOUT 2.0
+ #define ANDROID_RETRANSMIT_BASE 1.4
+diff --git a/src/frontends/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml b/src/frontends/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+index f0f762b..83d1abe 100644
+--- a/src/frontends/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
++++ b/src/frontends/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+@@ -1,20 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<!--
+-    Copyright (C) 2018 Tobias Brunner
+-
+-    Copyright (C) secunet Security Networks AG
+-
+-    This program is free software; you can redistribute it and/or modify it
+-    under the terms of the GNU General Public License as published by the
+-    Free Software Foundation; either version 2 of the License, or (at your
+-    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+-
+-    This program is distributed in the hope that it will be useful, but
+-    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+-    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+-    for more details.
+--->
+ <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+-    <background android:drawable="@mipmap/ic_launcher_bg" />
+-    <foreground android:drawable="@mipmap/ic_launcher_fg" />
++    <background android:drawable="@android:color/white" />
++    <foreground android:drawable="@drawable/vc_ic_launcher_fg" />
+ </adaptive-icon>
+diff --git a/src/frontends/android/app/src/main/res/values-de/strings.xml b/src/frontends/android/app/src/main/res/values-de/strings.xml
+index c282004..33b89de 100644
+--- a/src/frontends/android/app/src/main/res/values-de/strings.xml
++++ b/src/frontends/android/app/src/main/res/values-de/strings.xml
+@@ -19,7 +19,7 @@
+ <resources>
+ 
+     <!-- Application -->
+-    <string name="app_name">strongSwan VPN Client</string>
++    <string name="app_name">VPN Connect</string>
+     <string name="main_activity_name">strongSwan</string>
+     <string name="show_log">Log anzeigen</string>
+     <string name="search">Suchen</string>
+diff --git a/src/frontends/android/app/src/main/res/values-pl/strings.xml b/src/frontends/android/app/src/main/res/values-pl/strings.xml
+index 82d9655..99e5dc3 100644
+--- a/src/frontends/android/app/src/main/res/values-pl/strings.xml
++++ b/src/frontends/android/app/src/main/res/values-pl/strings.xml
+@@ -21,7 +21,7 @@
+ <resources xmlns:tools="http://schemas.android.com/tools">
+ 
+     <!-- Application -->
+-    <string name="app_name">strongSwan klient VPN</string>
++    <string name="app_name">VPN Connect</string>
+     <string name="main_activity_name">strongSwan</string>
+     <string name="show_log">Pokaż log</string>
+     <string name="search">Szukaj</string>
+diff --git a/src/frontends/android/app/src/main/res/values-ru/strings.xml b/src/frontends/android/app/src/main/res/values-ru/strings.xml
+index ac09e3e..9b4a691 100644
+--- a/src/frontends/android/app/src/main/res/values-ru/strings.xml
++++ b/src/frontends/android/app/src/main/res/values-ru/strings.xml
+@@ -15,7 +15,7 @@
+ <resources xmlns:tools="http://schemas.android.com/tools">
+ 
+     <!-- Application -->
+-    <string name="app_name">Клиент strongSwan VPN</string>
++    <string name="app_name">VPN Connect</string>
+     <string name="main_activity_name">strongSwan</string>
+     <string name="show_log">Журнал</string>
+     <string name="search">Поиск</string>
+diff --git a/src/frontends/android/app/src/main/res/values-uk/strings.xml b/src/frontends/android/app/src/main/res/values-uk/strings.xml
+index a819bc8..e515c28 100644
+--- a/src/frontends/android/app/src/main/res/values-uk/strings.xml
++++ b/src/frontends/android/app/src/main/res/values-uk/strings.xml
+@@ -16,7 +16,7 @@
+ <resources xmlns:tools="http://schemas.android.com/tools">
+ 
+     <!-- Application -->
+-    <string name="app_name">strongSwan VPN клієнт</string>
++    <string name="app_name">VPN Connect</string>
+     <string name="main_activity_name">strongSwan</string>
+     <string name="show_log">Перегляд журналу</string>
+     <string name="search">Пошук</string>
+diff --git a/src/frontends/android/app/src/main/res/values-zh-rCN/strings.xml b/src/frontends/android/app/src/main/res/values-zh-rCN/strings.xml
+index a7ad193..c9eada9 100644
+--- a/src/frontends/android/app/src/main/res/values-zh-rCN/strings.xml
++++ b/src/frontends/android/app/src/main/res/values-zh-rCN/strings.xml
+@@ -15,7 +15,7 @@
+ <resources>
+ 
+     <!-- Application -->
+-    <string name="app_name">strongSwan VPN 客户端</string>
++    <string name="app_name">VPN Connect</string>
+     <string name="main_activity_name">strongSwan</string>
+     <string name="show_log">浏览日志</string>
+     <string name="search">搜索</string>
+diff --git a/src/frontends/android/app/src/main/res/values-zh-rTW/strings.xml b/src/frontends/android/app/src/main/res/values-zh-rTW/strings.xml
+index 5331675..aff1999 100644
+--- a/src/frontends/android/app/src/main/res/values-zh-rTW/strings.xml
++++ b/src/frontends/android/app/src/main/res/values-zh-rTW/strings.xml
+@@ -15,7 +15,7 @@
+ <resources>
+ 
+     <!-- Application -->
+-    <string name="app_name">strongSwan VPN 用戶端</string>
++    <string name="app_name">VPN Connect</string>
+     <string name="main_activity_name">strongSwan</string>
+     <string name="show_log">觀看日誌</string>
+     <string name="search">搜尋</string>
+diff --git a/src/frontends/android/app/src/main/res/values/arrays.xml b/src/frontends/android/app/src/main/res/values/arrays.xml
+index 717deb3..c3edf6e 100644
+--- a/src/frontends/android/app/src/main/res/values/arrays.xml
++++ b/src/frontends/android/app/src/main/res/values/arrays.xml
+@@ -22,6 +22,7 @@
+         <item>IKEv2 Certificate + EAP (Username/Password)</item>
+         <item>IKEv2 EAP-TLS (Certificate)</item>
+         <item>IKEv2 EAP-TNC (Username/Password)</item>
++        <item>IKEv1 XAuth + PSK (Username/Password)</item>
+     </string-array>
+ 
+     <string-array name="managed_config_vpn_type_values" translatable="false">
+diff --git a/src/frontends/android/app/src/main/res/values/strings.xml b/src/frontends/android/app/src/main/res/values/strings.xml
+index 4174636..33f5554 100644
+--- a/src/frontends/android/app/src/main/res/values/strings.xml
++++ b/src/frontends/android/app/src/main/res/values/strings.xml
+@@ -19,7 +19,7 @@
+ <resources>
+ 
+     <!-- Application -->
+-    <string name="app_name">strongSwan VPN Client</string>
++    <string name="app_name">VPN Connect</string>
+     <string name="main_activity_name">strongSwan</string>
+     <string name="show_log">View log</string>
+     <string name="search">Search</string>
+diff --git a/src/libcharon/Android.mk b/src/libcharon/Android.mk
+index c6a794e..52fee06 100644
+--- a/src/libcharon/Android.mk
++++ b/src/libcharon/Android.mk
+@@ -174,6 +174,8 @@ endif
+ 
+ LOCAL_SRC_FILES += $(call add_plugin, eap-gtc)
+ 
++LOCAL_SRC_FILES += $(call add_plugin, xauth-generic)
++
+ LOCAL_SRC_FILES += $(call add_plugin, eap-identity)
+ 
+ LOCAL_SRC_FILES += $(call add_plugin, eap-md5)
