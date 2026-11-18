@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+# VPN Connect for Linux, author: zero.cyfa
+import os
+import sys
+
+here = os.path.dirname(os.path.realpath(__file__))
+for candidate in (os.path.join(here, ".."),                                  # source checkout
+                  os.path.join(here, "..", "lib", "vpn-connect")):           # installed (<prefix>/bin)
+    if os.path.isdir(os.path.join(candidate, "vpn_connect")):
+        sys.path.insert(0, os.path.abspath(candidate))
+        break
+
+from vpn_connect.app import main  # noqa: E402
+
+sys.exit(main())

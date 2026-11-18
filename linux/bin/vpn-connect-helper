@@ -1,0 +1,11 @@
+#!/usr/bin/python3 -I
+# VPN Connect privileged helper, started by the app through pkexec. Author: zero.cyfa
+# -I: ignore PYTHON* variables and the user's site-packages; only the installed package is loaded.
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+
+from vpn_connect.helper import main  # noqa: E402
+
+sys.exit(main())
