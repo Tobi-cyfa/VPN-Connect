@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vc_signature" translatable="false">by zero.cyfa</string>
+    <string name="vc_wordmark" translatable="false">VPN CONNECT</string>
+
+    <string name="vc_tab_connections">Connections</string>
+    <string name="vc_tab_events">Events</string>
+    <string name="vc_more_options">More options</string>
+
+    <string name="vc_menu_import">Import connection</string>
+    <string name="vc_menu_log">Open VPN log</string>
+    <string name="vc_menu_help">Help</string>
+    <string name="vc_menu_about">About</string>
+    <string name="vc_menu_quit">Quit</string>
+
+    <string name="vc_import_short">Import</string>
+    <string name="vc_no_connections">No connections</string>
+    <string name="vc_empty">No connections yet.\n\nOpen the ⋮ menu, tap “Import connection” and choose your .scx file.</string>
+    <string name="vc_last_connected">Last connected %1$s</string>
+    <string name="vc_never_connected">Never connected</string>
+
+    <string name="vc_connect">Connect</string>
+    <string name="vc_disconnect">Disconnect</string>
+    <string name="vc_cancel">Cancel</string>
+    <string name="vc_close">Close</string>
+    <string name="vc_remove">Remove</string>
+
+    <string name="vc_status_connected">Connected</string>
+    <string name="vc_status_connecting">Connecting…</string>
+    <string name="vc_status_disconnecting">Disconnecting…</string>
+    <string name="vc_connected_for">Connected  ·  %1$s</string>
+
+    <string name="vc_err_auth">Sign-in failed</string>
+    <string name="vc_err_peer_auth">The gateway did not accept the pre-shared key</string>
+    <string name="vc_err_lookup">Gateway address not found</string>
+    <string name="vc_err_unreachable">Gateway not reachable</string>
+    <string name="vc_err_generic">Connection error</string>
+
+    <string name="vc_gateway">Gateway: %1$s</string>
+    <string name="vc_networks">Networks: %1$s</string>
+    <string name="vc_details_title">Connection details</string>
+    <string name="vc_details_networks_none">None listed</string>
+
+    <string name="vc_auth_title">Authenticate user</string>
+    <string name="vc_auth_prompt">Please enter user credentials</string>
+    <string name="vc_auth_text">To connect, enter your user name and password and click Sign in.</string>
+    <string name="vc_hint_username">User name</string>
+    <string name="vc_hint_password">Password</string>
+    <string name="vc_sign_in">Sign in</string>
+
+    <string name="vc_col_occurred">Occurred</string>
+    <string name="vc_col_description">Description</string>
+    <string name="vc_clear_events">Clear events</string>
+    <string name="vc_no_events">No events yet.</string>
+    <string name="vc_ev_started">VPN Connect version %1$s</string>
+    <string name="vc_ev_connected">Connected to “%1$s”</string>
+    <string name="vc_ev_disconnected">Disconnected from “%1$s”</string>
+    <string name="vc_ev_error">“%1$s”: %2$s</string>
+    <string name="vc_ev_vpn_permission">VPN permission was not granted</string>
+
+    <string name="vc_remove_title">Remove connection?</string>
+    <string name="vc_remove_message">“%1$s” and its saved settings will be deleted from this phone.</string>
+
+    <string name="vc_imported_scx">Imported “%1$s”. Tap it, then Connect.</string>
+    <string name="vc_updated_scx">Updated “%1$s”.</string>
+    <string name="vc_scx_invalid">This is not a usable Sophos Connect (.scx) file.</string>
+    <string name="vc_file_unreadable">Could not read the selected file.</string>
+    <string name="vc_import_failed">Could not save the connection.</string>
+
+    <string name="vc_help_title">Help</string>
+    <string name="vc_help_body">1. Open the ⋮ menu, tap “Import connection” and choose your .scx file.\n2. Select the connection, tap Connect, allow the VPN prompt, then sign in with your user name and password.\n3. Tap Disconnect when you are done.\n\nIf something fails, open the VPN log from the ⋮ menu and send it to ICT support.</string>
+    <string name="vc_about_title">About</string>
+    <string name="vc_about_body">VPN Connect connects to IPsec VPNs on Sophos Firewall, using the Sophos Connect (.scx) file you import.\n\nVPN engine: strongSwan, licensed under GPLv2. This app is distributed under the same licence.\n\nAuthor: zero.cyfa</string>
+
+    <string name="vc_log_title">VPN log</string>
+    <string name="vc_log_empty">The log is empty.</string>
+    <string name="vc_copy">Copy</string>
+    <string name="vc_share">Share</string>
+    <string name="vc_copied">Log copied</string>
+</resources>

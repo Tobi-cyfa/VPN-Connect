@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vc_primary">#1B87D2</color>
+    <color name="vc_navy">#1D2E3F</color>
+    <color name="vc_gray">#EBEBEB</color>
+    <color name="vc_card">#FFFFFF</color>
+    <color name="vc_text">#1B2330</color>
+    <color name="vc_text_row">#58616D</color>
+    <color name="vc_text_secondary">#5B6676</color>
+    <color name="vc_divider">#D5DAE0</color>
+    <color name="vc_tab_inactive">#9AA8B8</color>
+    <color name="vc_row_selected">#BDD3EA</color>
+    <color name="vc_input_border">#9AA1A9</color>
+    <color name="vc_sub_gray">#A0AAB6</color>
+    <color name="vc_sub_green">#5BAA3C</color>
+    <color name="vc_event_text">#6B7480</color>
+    <color name="vc_green">#3E9A52</color>
+    <color name="vc_amber">#C98200</color>
+    <color name="vc_red">#D33A3A</color>
+</resources>
