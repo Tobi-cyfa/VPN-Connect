@@ -1,0 +1,16 @@
+# Maintainer: zero.cyfa
+pkgname=vpn-connect
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="IPsec VPN client for Sophos Firewall (.scx profiles)"
+arch=('any')
+url="https://github.com/Tobi-cyfa/VPN-Connect"
+license=('GPL-2.0-or-later')
+depends=('python' 'python-gobject' 'gtk3' 'polkit' 'strongswan')
+source=("vpn-connect-$pkgver-linux.tar.gz")
+sha256sums=('@SHA256@')
+
+package() {
+  cd "vpn-connect-$pkgver"
+  sh packaging/install-tree.sh "$pkgdir" /usr
+}
