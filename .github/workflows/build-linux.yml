@@ -1,0 +1,164 @@
+name: Build Linux packages
+# VPN Connect for Linux, author: zero.cyfa
+#
+# Builds the .deb, .rpm, .tar.gz and Arch PKGBUILD, installs them on Ubuntu, Debian, Fedora and
+# Arch, and checks that strongSwan accepts the connection the app loads.
+# Release: push a tag such as linux-v0.2, or run it from the Actions tab with a release tag.
+# Linux releases use their own linux-v* tags, so they never clash with the APK releases (v*).
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to create or update, e.g. linux-v0.2 (leave empty for a plain build)'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths: ['linux/**', '.github/workflows/build-linux.yml']
+    tags: ['linux-v*']
+  pull_request:
+    paths: ['linux/**', '.github/workflows/build-linux.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit tests
+        working-directory: linux
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Check the release tag matches the app version
+        if: startsWith(github.ref, 'refs/tags/linux-v') || inputs.release_tag != ''
+        working-directory: linux
+        env:
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          V=$(python3 -c 'import vpn_connect; print(vpn_connect.VERSION)')
+          [ "$TAG" = "linux-v$V" ] || { echo "::error::Tag $TAG does not match VERSION $V (expected linux-v$V)"; exit 1; }
+
+      - name: Build packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev rpm
+          bash linux/packaging/build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VpnConnect-linux
+          path: linux/dist/*
+          if-no-files-found: error
+
+  test-ubuntu:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with: {name: VpnConnect-linux, path: dist}
+
+      - name: Install the .deb (pulls in strongSwan, GTK and polkit)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ./dist/vpn-connect_*_all.deb xvfb
+          dpkg -L vpn-connect
+
+      - name: strongSwan has the plugins the tunnel needs
+        run: |
+          sudo systemctl start strongswan.service || sudo systemctl start strongswan-swanctl.service
+          sleep 2
+          sudo swanctl --stats | tee stats.txt
+          for p in vici xauth-generic resolve; do
+            grep -qw "$p" stats.txt || { echo "::error::charon plugin $p is not loaded"; exit 1; }
+          done
+
+      - name: Helper loads and removes the IKEv1/XAuth connection in charon
+        run: sudo /usr/lib/vpn-connect/vpn-connect-helper --selftest
+
+      - name: Helper refuses to run unprivileged; polkit knows the action
+        run: |
+          ! /usr/lib/vpn-connect/vpn-connect-helper
+          pkaction --action-id com.vpnconnect.helper --verbose
+
+      - name: The window starts and imports a .scx file
+        run: |
+          cat > /tmp/office.scx <<'EOF'
+          {"gateway": "192.0.2.10", "display_name": "CI office",
+           "remote_auth": {"psk": {"secret": "ci"}},
+           "child": {"remote_ts": ["10.0.0.0/8"]}}
+          EOF
+          export HOME=$(mktemp -d)
+          # runners set XDG_CONFIG_HOME to /home/runner/.config; use the fresh home instead
+          export XDG_CONFIG_HOME="$HOME/.config" XDG_STATE_HOME="$HOME/.local/state"
+          # the import confirmation dialog keeps the app running; timeout ends it
+          xvfb-run -a timeout 8 vpn-connect /tmp/office.scx || [ $? -eq 124 ]
+          grep -q '"CI office"' "$HOME/.config/vpn-connect/connections.json"
+          stat -c '%a' "$HOME/.config/vpn-connect/connections.json" | grep -qx 600
+          echo "GUI started, imported the profile, file mode 0600"
+
+  test-debian:
+    needs: build
+    runs-on: ubuntu-24.04
+    container: debian:bookworm
+    steps:
+      - uses: actions/download-artifact@v4
+        with: {name: VpnConnect-linux, path: dist}
+      - run: |
+          apt-get update
+          apt-get install -y ./dist/vpn-connect_*_all.deb
+          python3 -c 'import sys; sys.path.insert(0, "/usr/lib/vpn-connect"); import vpn_connect.helper, vpn_connect.scx'
+
+  test-fedora:
+    needs: build
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: {name: VpnConnect-linux, path: dist}
+      - run: |
+          dnf install -y ./dist/vpn-connect-*.noarch.rpm
+          rpm -ql vpn-connect
+          python3 -c 'import gi; gi.require_version("Gtk", "3.0"); import sys; sys.path.insert(0, "/usr/lib/vpn-connect"); import vpn_connect.helper'
+          test -x /usr/sbin/swanctl || command -v swanctl
+
+  test-arch:
+    needs: build
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: {name: VpnConnect-linux, path: dist}
+      - run: |
+          pacman -Syu --noconfirm --needed base-devel
+          useradd -m builder
+          cp dist/PKGBUILD dist/vpn-connect-*-linux.tar.gz /home/builder/
+          chown -R builder /home/builder
+          su builder -c 'cd ~ && makepkg --nodeps --noconfirm'
+          pacman -U --noconfirm /home/builder/vpn-connect-*.pkg.tar.zst
+          pacman -Ql vpn-connect
+
+  release:
+    needs: [test-ubuntu, test-debian, test-fedora, test-arch]
+    if: startsWith(github.ref, 'refs/tags/linux-v') || inputs.release_tag != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: VpnConnect-linux, path: dist}
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" dist/* \
+              --target "$GITHUB_SHA" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "VPN Connect for Linux ${TAG#linux-}" \
+              --notes-file linux/RELEASE_NOTES.md
+          fi

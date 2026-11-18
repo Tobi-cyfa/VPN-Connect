@@ -1,0 +1,124 @@
+name: Build Android APK
+# VPN Connect, author: zero.cyfa
+
+# Run it from the "Actions" tab ("Run workflow"). The finished APK is attached to the run.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to create, e.g. v0.2 (leave empty for a plain build)'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    # Pushing a tag such as v0.2 builds the APK and publishes it as a GitHub release.
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      NDK_VERSION: 27.3.13750724
+      OPENSSL_TAG: openssl-3.0.22
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool gperf bison flex pkg-config jq make perl libssl-dev libgmp-dev
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Android NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Get strongSwan and apply the VPN Connect changes
+        run: bash apply.sh strongswan
+
+      - name: Build OpenSSL (libcrypto) for Android
+        run: |
+          git clone --depth 1 --branch "$OPENSSL_TAG" https://github.com/openssl/openssl.git "$RUNNER_TEMP/openssl"
+          cd strongswan
+          ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/$NDK_VERSION" \
+          OPENSSL_SRC="$RUNNER_TEMP/openssl" \
+          NO_DOCKER=1 \
+          src/frontends/android/openssl/build.sh
+
+      - name: Prepare the strongSwan sources
+        run: |
+          cd strongswan
+          ./autogen.sh
+          ./configure
+          make -j"$(nproc)"
+          make distclean
+
+      - name: Check resources are in place
+        run: |
+          cd strongswan/src/frontends/android
+          test -f app/src/main/res/values/vc_theme.xml
+          test -f app/src/main/java/com/vpnconnect/app/MainActivity.java
+          echo "VPN Connect files present."
+
+      - name: Build the APK (signed with the fixed key, so updates install over old versions)
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          SIGN=()
+          if [ -n "$DEBUG_KEYSTORE_B64" ]; then
+            KS="$RUNNER_TEMP/vc.keystore"
+            echo "$DEBUG_KEYSTORE_B64" | base64 -d > "$KS"
+            SIGN=(-Pandroid.injected.signing.store.file="$KS"
+                  -Pandroid.injected.signing.store.password=android
+                  -Pandroid.injected.signing.key.alias=androiddebugkey
+                  -Pandroid.injected.signing.key.password=android)
+          else
+            echo "::warning::No DEBUG_KEYSTORE_B64 secret: APK gets a random key."
+          fi
+          cd strongswan/src/frontends/android
+          ./gradlew --no-daemon assembleDebug "${SIGN[@]}"
+
+      - name: Check the APK carries the fixed signing key
+        env:
+          EXPECTED_CERT_SHA256: b7564d8c19f33eca378e152e93727c90b77dac5884ac2d2c71f877710fd70a17
+        run: |
+          APK=$(find strongswan/src/frontends/android/app/build/outputs/apk -name '*.apk' | head -1)
+          GOT=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
+          echo "APK certificate SHA-256: $GOT"
+          [ "$GOT" = "$EXPECTED_CERT_SHA256" ] || { echo "::error::APK is not signed with the fixed key"; exit 1; }
+
+      - name: Keep the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VpnConnect-apk
+          path: strongswan/src/frontends/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
+      - name: Publish the GitHub release (tag push, or manual run with a release tag)
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          APK=$(find strongswan/src/frontends/android/app/build/outputs/apk -name '*.apk' | head -1)
+          OUT="VpnConnect-${TAG}.apk"
+          cp "$APK" "$OUT"
+          # Re-running for an existing tag replaces that release (and its tag) with this build.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+          fi
+          # Creates the tag on the built commit if it does not exist yet.
+          gh release create "$TAG" "$OUT" \
+            --target "$GITHUB_SHA" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "VPN Connect ${TAG}" \
+            --notes-file RELEASE_NOTES.md
