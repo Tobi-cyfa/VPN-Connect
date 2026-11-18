@@ -1,0 +1,15 @@
+Package: vpn-connect
+Version: @VERSION@
+Architecture: all
+Maintainer: zero.cyfa <zero.cyfa@users.noreply.github.com>
+Installed-Size: @SIZE@
+Section: net
+Priority: optional
+Homepage: https://github.com/Tobi-cyfa/VPN-Connect
+Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-3.0, pkexec | policykit-1, charon-systemd, strongswan-swanctl, libcharon-extauth-plugins | libcharon-extra-plugins
+Recommends: libstrongswan-standard-plugins
+Description: IPsec VPN client for Sophos Firewall (.scx profiles)
+ VPN Connect imports a Sophos Connect .scx file and connects the same IPsec
+ tunnel Sophos Connect makes on Windows: IKEv1 Main Mode with a pre-shared key,
+ XAuth user name and password, Mode Config and one tunnel per listed network.
+ The VPN engine is strongSwan. Author: zero.cyfa
