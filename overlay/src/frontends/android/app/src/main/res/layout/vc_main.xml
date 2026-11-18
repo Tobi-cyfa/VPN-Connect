@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/vc_gray"
+    android:orientation="vertical">
+
+    <!-- Dark top bar: wordmark, Connections / Events tabs, menu -->
+    <LinearLayout
+        android:id="@+id/vc_topbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/vc_navy"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.08"
+            android:text="@string/vc_wordmark"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="52dp">
+
+                <TextView
+                    android:id="@+id/vc_tab_connections"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:text="@string/vc_tab_connections"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp" />
+
+                <ImageView
+                    android:id="@+id/vc_notch_connections"
+                    android:layout_width="16dp"
+                    android:layout_height="8dp"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/vc_notch" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="52dp">
+
+                <TextView
+                    android:id="@+id/vc_tab_events"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:text="@string/vc_tab_events"
+                    android:textColor="@color/vc_tab_inactive"
+                    android:textSize="14sp" />
+
+                <ImageView
+                    android:id="@+id/vc_notch_events"
+                    android:layout_width="16dp"
+                    android:layout_height="8dp"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/vc_notch"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/vc_menu"
+            android:layout_width="44dp"
+            android:layout_height="52dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/vc_more_options"
+            android:gravity="center"
+            android:text="⋮"
+            android:textColor="#FFFFFF"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/vc_pages"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- ===================== Connections page ===================== -->
+        <LinearLayout
+            android:id="@+id/vc_page_connections"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/vc_card"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/vc_ic_rings" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/vc_header_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:fontFamily="sans-serif-light"
+                        android:maxLines="1"
+                        android:textColor="#111111"
+                        android:textSize="24sp" />
+
+                    <TextView
+                        android:id="@+id/vc_header_sub"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/vc_sub_gray"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/vc_header_action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/vc_btn"
+                    android:minWidth="92dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:stateListAnimator="@null"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@color/vc_card"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/vc_panel_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="6dp"
+                        android:textColor="#4A5666"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginEnd="14dp"
+                        android:background="@drawable/vc_rule" />
+
+                    <!-- connection list -->
+                    <ScrollView
+                        android:id="@+id/vc_list_scroll"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1">
+
+                        <LinearLayout
+                            android:id="@+id/vc_list"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="10dp" />
+                    </ScrollView>
+
+                    <TextView
+                        android:id="@+id/vc_empty"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:padding="28dp"
+                        android:text="@string/vc_empty"
+                        android:textColor="@color/vc_text_secondary"
+                        android:textSize="15sp"
+                        android:visibility="gone" />
+
+                    <!-- Authenticate user -->
+                    <ScrollView
+                        android:id="@+id/vc_auth_scroll"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical"
+                            android:padding="20dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:text="@string/vc_auth_text"
+                                android:textColor="@color/vc_text_row"
+                                android:textSize="13sp" />
+
+                            <EditText
+                                android:id="@+id/vc_username"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="24dp"
+                                android:autofillHints="username"
+                                android:background="@drawable/vc_input_bg"
+                                android:hint="@string/vc_hint_username"
+                                android:imeOptions="actionNext"
+                                android:inputType="textNoSuggestions"
+                                android:maxLines="1"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp"
+                                android:singleLine="true"
+                                android:textColor="@color/vc_text"
+                                android:textColorHint="@color/vc_text_secondary"
+                                android:textSize="14sp" />
+
+                            <EditText
+                                android:id="@+id/vc_password"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="12dp"
+                                android:autofillHints="password"
+                                android:background="@drawable/vc_input_bg"
+                                android:hint="@string/vc_hint_password"
+                                android:imeOptions="actionDone"
+                                android:inputType="textPassword"
+                                android:maxLines="1"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp"
+                                android:singleLine="true"
+                                android:textColor="@color/vc_text"
+                                android:textColorHint="@color/vc_text_secondary"
+                                android:textSize="14sp" />
+
+                            <Button
+                                android:id="@+id/vc_sign_in"
+                                android:layout_width="wrap_content"
+                                android:layout_height="40dp"
+                                android:layout_marginTop="24dp"
+                                android:background="@drawable/vc_btn"
+                                android:minWidth="120dp"
+                                android:stateListAnimator="@null"
+                                android:text="@string/vc_sign_in"
+                                android:textAllCaps="false"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </ScrollView>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Author signature -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingBottom="8dp"
+                android:text="@string/vc_signature"
+                android:textColor="@color/vc_sub_gray"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- ===================== Events page ===================== -->
+        <LinearLayout
+            android:id="@+id/vc_page_events"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="4dp">
+
+                <TextView
+                    android:layout_width="30dp"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:layout_width="128dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/vc_col_occurred"
+                    android:textColor="@color/vc_event_text"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/vc_col_description"
+                    android:textColor="@color/vc_event_text"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/vc_clear_events"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="@drawable/vc_btn"
+                    android:minWidth="0dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/vc_clear_events"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="12dp"
+                android:layout_marginBottom="12dp"
+                android:layout_weight="1"
+                android:background="@color/vc_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/vc_events_list"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+
+                    <TextView
+                        android:id="@+id/vc_no_events"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:padding="28dp"
+                        android:text="@string/vc_no_events"
+                        android:textColor="@color/vc_event_text"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>
