@@ -8,8 +8,24 @@ strongSwan package from your distribution.
 
 ## Download and install
 
-Download the file for your distribution from the repository's **Releases** page
-(release `linux-v0.2`):
+Quickest: one terminal command, which downloads from the `linux-v0.2` release and installs.
+
+    # Ubuntu, Debian, Mint, Pop!_OS
+    wget https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect_0.2_all.deb && sudo apt install ./vpn-connect_0.2_all.deb
+
+    # Fedora, RHEL/Alma/Rocky (with EPEL)   (openSUSE: replace "dnf" with "zypper")
+    sudo dnf install https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect-0.2-1.noarch.rpm
+
+    # Arch, Manjaro
+    mkdir vpn-connect && cd vpn-connect && curl -L -O https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/PKGBUILD -O https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect-0.2-linux.tar.gz && makepkg -si
+
+    # Any other distribution (into /usr/local)
+    curl -L https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect-0.2-linux.tar.gz | tar xz && cd vpn-connect-0.2 && sudo ./install.sh
+
+    # From the git source (latest code, into /usr/local)
+    git clone https://github.com/zero-cyfa/VPN-Connect.git && sudo sh VPN-Connect/linux/packaging/install-tree.sh / /usr/local
+
+Or download the file for your distribution from the repository's **Releases** page by hand:
 
 | Distribution | File | Install |
 |---|---|---|

@@ -10,11 +10,47 @@ The first Linux desktop version of VPN Connect, the client for Sophos Firewall I
   never saved.
 - Author: zero.cyfa
 
-### Which file do I need?
+### Install from the terminal
 
-- **Ubuntu, Debian, Mint, Pop!_OS:** `vpn-connect_0.2_all.deb` → `sudo apt install ./vpn-connect_0.2_all.deb`
-- **Fedora, RHEL/Alma/Rocky (EPEL), openSUSE:** `vpn-connect-0.2-1.noarch.rpm` → `sudo dnf install ./vpn-connect-0.2-1.noarch.rpm`
-- **Arch, Manjaro:** `PKGBUILD` and `vpn-connect-0.2-linux.tar.gz` in one folder → `makepkg -si`
-- **Other distributions:** `vpn-connect-0.2-linux.tar.gz` → unpack, `sudo ./install.sh`
+Copy the line for your distribution into a terminal. It downloads the package from this release
+and installs it together with strongSwan, GTK and polkit.
 
-Then start **VPN Connect** from the applications menu.
+**Ubuntu, Debian, Mint, Pop!_OS, elementary**
+
+```sh
+wget https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect_0.2_all.deb && sudo apt install ./vpn-connect_0.2_all.deb
+```
+
+**Fedora, RHEL/Alma/Rocky (with EPEL)**
+
+```sh
+sudo dnf install https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect-0.2-1.noarch.rpm
+```
+
+**openSUSE**
+
+```sh
+sudo zypper install https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect-0.2-1.noarch.rpm
+```
+
+**Arch, Manjaro, EndeavourOS**
+
+```sh
+mkdir vpn-connect && cd vpn-connect && curl -L -O https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/PKGBUILD -O https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect-0.2-linux.tar.gz && makepkg -si
+```
+
+**Any other distribution** (installs into `/usr/local`; install strongSwan, PyGObject/GTK 3 and polkit first, `install.sh` tells you if one is missing)
+
+```sh
+curl -L https://github.com/zero-cyfa/VPN-Connect/releases/download/linux-v0.2/vpn-connect-0.2-linux.tar.gz | tar xz && cd vpn-connect-0.2 && sudo ./install.sh
+```
+
+**From the git source** (latest code, installs into `/usr/local`; same requirements as above)
+
+```sh
+git clone https://github.com/zero-cyfa/VPN-Connect.git && sudo sh VPN-Connect/linux/packaging/install-tree.sh / /usr/local
+```
+
+Then start **VPN Connect** from the applications menu, or run `vpn-connect`.
+
+To check a download, compare it with `SHA256SUMS` from this release: `sha256sum -c SHA256SUMS --ignore-missing`.
