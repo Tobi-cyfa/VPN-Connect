@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive launcher foreground: the same blue rings as vc_ic_rings, centred in the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="24" android:translateY="24" android:scaleX="1.0714" android:scaleY="1.0714">
+        <path android:strokeColor="#1B7BC4" android:strokeWidth="4" android:fillColor="#00000000" android:pathData="M51,28 A23,23 0 1,1 5,28 A23,23 0 1,1 51,28 Z" />
+        <path android:strokeColor="#1B7BC4" android:strokeWidth="4" android:fillColor="#00000000" android:pathData="M42,28 A14,14 0 1,1 14,28 A14,14 0 1,1 42,28 Z" />
+        <path android:fillColor="#1B7BC4" android:pathData="M34,28 A6,6 0 1,1 22,28 A6,6 0 1,1 34,28 Z" />
+    </group>
+</vector>
