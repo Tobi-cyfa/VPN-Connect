@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=VPN Connect
+GenericName=IPsec VPN client
+Comment=Connect to Sophos Firewall IPsec VPNs with a Sophos Connect (.scx) file
+Exec=vpn-connect %F
+Icon=vpn-connect
+Terminal=false
+Categories=Network;
+Keywords=VPN;IPsec;Sophos;scx;strongSwan;
+MimeType=application/x-vpn-connect-scx;
+StartupNotify=true
+StartupWMClass=vpn-connect
